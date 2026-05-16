@@ -1,0 +1,6 @@
+{
+  "name": "Habitly: Mindful Daily Tracking",
+  "description": "A refined, typographic habit tracker designed for consistency. Track daily streaks, visualize progress, and build better routines with a minimalist, high-impact interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
