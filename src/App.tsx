@@ -20,7 +20,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Bell
+  Bell,
+  Heart,
+  Droplets,
+  Book,
+  Code,
+  Coffee,
+  Sun,
+  Moon,
+  Zap,
+  Target,
+  Smile,
+  Check,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -42,7 +54,162 @@ const COLORS = [
   '#f43f5e', '#71717a'
 ];
 
+const HABIT_ICONS = [
+  { name: 'Plus', icon: Plus },
+  { name: 'Heart', icon: Heart },
+  { name: 'Droplets', icon: Droplets },
+  { name: 'Book', icon: Book },
+  { name: 'Code', icon: Code },
+  { name: 'Coffee', icon: Coffee },
+  { name: 'Sun', icon: Sun },
+  { name: 'Moon', icon: Moon },
+  { name: 'Zap', icon: Zap },
+  { name: 'Target', icon: Target },
+  { name: 'Smile', icon: Smile },
+  { name: 'Check', icon: Check },
+];
+
+export interface BadgeDefinition {
+  id: string;
+  name: string;
+  description: string;
+  type: 'streak' | 'total_completions' | 'first';
+  targetValue: number;
+  pointsReward: number;
+  iconName: string;
+}
+
+export const BADGES: BadgeDefinition[] = [
+  {
+    id: 'first_step',
+    name: 'Seed of Intention',
+    description: 'Complete your first-ever daily habit check-in.',
+    type: 'first',
+    targetValue: 1,
+    pointsReward: 50,
+    iconName: 'Smile',
+  },
+  {
+    id: 'streak_7',
+    name: 'Week of Devotion',
+    description: 'Reach a 7-day streak on any intention.',
+    type: 'streak',
+    targetValue: 7,
+    pointsReward: 150,
+    iconName: 'Flame',
+  },
+  {
+    id: 'streak_30',
+    name: 'Lunar Aura',
+    description: 'Reach a 30-day streak on any intention.',
+    type: 'streak',
+    targetValue: 30,
+    pointsReward: 500,
+    iconName: 'Moon',
+  },
+  {
+    id: 'streak_100',
+    name: 'Century Sage',
+    description: 'Reach a legendary 100-day streak on any intention.',
+    type: 'streak',
+    targetValue: 100,
+    pointsReward: 2000,
+    iconName: 'Trophy',
+  },
+  {
+    id: 'total_10',
+    name: 'Refinement Path',
+    description: 'Achieve 10 total completions across your intentions.',
+    type: 'total_completions',
+    targetValue: 10,
+    pointsReward: 100,
+    iconName: 'Zap',
+  },
+  {
+    id: 'total_50',
+    name: 'Aether Architect',
+    description: 'Achieve 50 total completions across your intentions.',
+    type: 'total_completions',
+    targetValue: 50,
+    pointsReward: 500,
+    iconName: 'Target',
+  },
+  {
+    id: 'total_200',
+    name: 'Cosmic Zen Mind',
+    description: 'Achieve 200 total completions across your intentions.',
+    type: 'total_completions',
+    targetValue: 200,
+    pointsReward: 1000,
+    iconName: 'Sun',
+  },
+];
+
 type SortOption = 'name' | 'category' | 'createdAt' | 'streak';
+
+function MultiSelectToolbar({ 
+  count, 
+  onClose, 
+  onArchive, 
+  onDelete, 
+  onCategoryChange 
+}: { 
+  count: number; 
+  onClose: () => void; 
+  onArchive: () => void; 
+  onDelete: () => void; 
+  onCategoryChange: (cat: HabitCategory) => void;
+}) {
+  return (
+    <motion.div 
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 100, opacity: 0 }}
+      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 bg-brand-900 text-brand-100 px-8 py-4 rounded-full shadow-2xl flex items-center gap-8 border border-white/10 backdrop-blur-md"
+    >
+      <div className="flex items-center gap-4 pr-8 border-r border-white/10">
+        <span className="text-sm font-bold uppercase tracking-widest">{count} Selected</span>
+        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={onArchive}
+          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-brand-100/60 transition-colors"
+        >
+          <Archive size={16} />
+          Archive
+        </button>
+        <button 
+          onClick={onDelete}
+          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-red-400 transition-colors"
+        >
+          <Trash2 size={16} />
+          Delete
+        </button>
+        
+        <div className="relative group">
+          <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-brand-100/60 transition-colors">
+            Move To...
+          </button>
+          <div className="absolute bottom-full mb-4 left-0 hidden group-hover:block bg-brand-900 border border-white/10 rounded-2xl p-2 min-w-[160px] shadow-2xl">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.name}
+                onClick={() => onCategoryChange(cat.name)}
+                className="w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 rounded-lg transition-colors"
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function App() {
   const [habits, setHabits] = useState<Habit[]>(() => {
@@ -65,8 +232,10 @@ export default function App() {
   const [view, setView] = useState<'today' | 'stats' | 'archived'>('today');
   const [filter, setFilter] = useState<HabitCategory | 'All'>('All');
   const [sortBy, setSortBy] = useState<SortOption>('createdAt');
+  const [selectedHabitIds, setSelectedHabitIds] = useState<Set<string>>(new Set());
   const [aiAdvice, setAiAdvice] = useState<{ advice: string; suggestion: string } | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [celebratingMilestone, setCelebratingMilestone] = useState<{ badgeName: string; points: number; text: string } | null>(null);
 
   useEffect(() => {
     localStorage.setItem('habitly_habits', JSON.stringify(habits));
@@ -98,25 +267,63 @@ export default function App() {
     return Math.round((completedCount / habitsForToday.length) * 100);
   }, [habitsForToday, completions, todayKey]);
 
-  const calculateStreak = (habitId: string, history: CompletionRecord) => {
+  const calculateStreakDetails = (habitId: string, history: CompletionRecord): { currentStreak: number; bestStreak: number; streakHistory: any[] } => {
     let currentStreak = 0;
+    let bestStreak = 0;
+    const streakHistory: { startDate: string; endDate: string; length: number }[] = [];
     
-    // Check if streak is still alive (today or yesterday completed)
-    const isDoneToday = !!history[todayKey]?.[habitId];
-    const yesterdayKey = format(subDays(today, 1), 'yyyy-MM-dd');
-    const isDoneYesterday = !!history[yesterdayKey]?.[habitId];
+    // Sort all dates that have any records
+    const habitCompletionDates = Object.keys(history)
+      .filter(date => history[date]?.[habitId])
+      .sort();
 
-    if (!isDoneToday && !isDoneYesterday) return 0;
-
-    // Start counting from the most recent completed day
-    let checkDate = isDoneToday ? today : subDays(today, 1);
-    
-    while (history[format(checkDate, 'yyyy-MM-dd')]?.[habitId]) {
-      currentStreak++;
-      checkDate = subDays(checkDate, 1);
+    if (habitCompletionDates.length === 0) {
+      return { currentStreak: 0, bestStreak: 0, streakHistory: [] };
     }
+
+    let tempStreak = 1;
+    let streakStart = habitCompletionDates[0];
     
-    return currentStreak;
+    for (let i = 1; i <= habitCompletionDates.length; i++) {
+      const prevDate = new Date(habitCompletionDates[i - 1]);
+      const currDate = habitCompletionDates[i] ? new Date(habitCompletionDates[i]) : null;
+      
+      const isConsecutive = currDate && 
+        (currDate.getTime() - prevDate.getTime()) <= (24 * 60 * 60 * 1000 + 1000 * 60); // Approx 1 day with small buffer
+
+      if (isConsecutive) {
+        tempStreak++;
+      } else {
+        // Streak ended
+        streakHistory.push({
+          startDate: streakStart,
+          endDate: habitCompletionDates[i - 1],
+          length: tempStreak
+        });
+        if (tempStreak > bestStreak) bestStreak = tempStreak;
+        
+        if (currDate) {
+          tempStreak = 1;
+          streakStart = habitCompletionDates[i];
+        }
+      }
+    }
+
+    // Calculate current streak
+    const lastCompletedDateKey = habitCompletionDates[habitCompletionDates.length - 1];
+    const lastDate = new Date(lastCompletedDateKey);
+    const isStillActive = (today.getTime() - lastDate.getTime()) <= (24 * 60 * 60 * 1000 + 1000 * 60);
+    
+    if (isStillActive) {
+      const lastStreak = streakHistory[streakHistory.length - 1];
+      currentStreak = lastStreak.length;
+    }
+
+    return { currentStreak, bestStreak, streakHistory };
+  };
+
+  const calculateStreak = (habitId: string, history: CompletionRecord) => {
+    return calculateStreakDetails(habitId, history).currentStreak;
   };
 
   // Stats calculation
@@ -126,10 +333,12 @@ export default function App() {
       end: today,
     });
 
+    let last7DaysCompletions = 0;
     const chartData = last7Days.map(date => {
       const dateKey = format(date, 'yyyy-MM-dd');
       const dayCompletions = completions[dateKey] || {};
       const completedCount = Object.values(dayCompletions).filter(Boolean).length;
+      last7DaysCompletions += completedCount;
       
       return {
         date: format(date, 'MMM dd'),
@@ -141,8 +350,52 @@ export default function App() {
       return acc + Object.values(day).filter(Boolean).length;
     }, 0);
 
-    return { chartData, totalCompletions };
-  }, [completions, today]);
+    const activeHabitsCount = habits.filter(h => !h.archived).length;
+    const last7DaysPotential = activeHabitsCount * 7;
+    const consistencyRate = last7DaysPotential > 0 ? Math.round((last7DaysCompletions / last7DaysPotential) * 100) : 0;
+
+    return { chartData, totalCompletions, consistencyRate };
+  }, [completions, today, habits]);
+
+  const rewards = useMemo(() => {
+    const totalCompletions = Object.values(completions).reduce((acc: number, day: any) => {
+      return acc + Object.values(day || {}).filter(Boolean).length;
+    }, 0) as number;
+
+    const bestStreak: number = habits.length > 0 
+      ? Math.max(0, ...habits.map(h => calculateStreakDetails(h.id, completions).bestStreak))
+      : 0;
+
+    const basePoints = totalCompletions * 10;
+    
+    // Determine which badges are unlocked
+    const badgeStatus = BADGES.map(badge => {
+      let isUnlocked = false;
+      let progress = 0;
+      
+      if (badge.type === 'first') {
+        isUnlocked = totalCompletions >= badge.targetValue;
+        progress = Math.min(totalCompletions, badge.targetValue);
+      } else if (badge.type === 'streak') {
+        isUnlocked = bestStreak >= badge.targetValue;
+        progress = Math.min(bestStreak, badge.targetValue);
+      } else if (badge.type === 'total_completions') {
+        isUnlocked = totalCompletions >= badge.targetValue;
+        progress = Math.min(totalCompletions, badge.targetValue);
+      }
+      
+      return {
+        ...badge,
+        isUnlocked,
+        progress,
+      };
+    });
+
+    const bonusPoints = badgeStatus.filter(b => b.isUnlocked).reduce((sum, b) => sum + b.pointsReward, 0);
+    const totalPoints = basePoints + bonusPoints;
+
+    return { totalPoints, badgeStatus, totalCompletions, bestStreak };
+  }, [completions, habits]);
 
   const filteredHabits = useMemo(() => {
     let result = habits;
@@ -174,6 +427,8 @@ export default function App() {
   }, [habits, filter, view, sortBy, completions]);
 
   const handleToggleHabit = (habitId: string) => {
+    const isNowCompleting = !(completions[todayKey] || {})[habitId];
+    
     setCompletions(prev => {
       const dayRecords = prev[todayKey] || {};
       return {
@@ -184,6 +439,40 @@ export default function App() {
         }
       };
     });
+
+    if (isNowCompleting) {
+      // Calculate what the streak will be assuming it is checked today
+      const simulatedCompletions = {
+        ...completions,
+        [todayKey]: {
+          ...(completions[todayKey] || {}),
+          [habitId]: true
+        }
+      };
+      
+      const details = calculateStreakDetails(habitId, simulatedCompletions);
+      const newStreak = details.currentStreak;
+      
+      if (newStreak === 7) {
+        setCelebratingMilestone({
+          badgeName: "Week of Devotion (7 Days)",
+          points: 150,
+          text: "You have completed a solid 7-day devotion streak on this intention! Your mindful discipline is shining."
+        });
+      } else if (newStreak === 30) {
+        setCelebratingMilestone({
+          badgeName: "Lunar Aura (30 Days)",
+          points: 500,
+          text: "Incredible! A complete 30-day lunar cycle streak achieved. You have made this intention part of your essence."
+        });
+      } else if (newStreak === 100) {
+        setCelebratingMilestone({
+          badgeName: "Century Sage (100 Days)",
+          points: 2000,
+          text: "Pure mastery. A legendary 100-day streak unlocked. You have entered the realm of the ascended."
+        });
+      }
+    }
   };
 
   const handleSaveHabit = (data: { 
@@ -194,6 +483,8 @@ export default function App() {
     frequency?: number[];
     reminderTime?: string;
     collectionId?: string;
+    goal?: string;
+    icon?: string;
   }) => {
     if (editingHabit) {
       setHabits(habits.map(h => h.id === editingHabit.id ? { ...h, ...data } : h));
@@ -221,6 +512,32 @@ export default function App() {
 
   const handleArchiveHabit = (id: string) => {
     setHabits(habits.map(h => h.id === id ? { ...h, archived: !h.archived } : h));
+  };
+
+  const toggleSelectHabit = (id: string) => {
+    setSelectedHabitIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkArchive = () => {
+    setHabits(habits.map(h => selectedHabitIds.has(h.id) ? { ...h, archived: true } : h));
+    setSelectedHabitIds(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    if (confirm(`Delete ${selectedHabitIds.size} habits?`)) {
+      setHabits(habits.filter(h => !selectedHabitIds.has(h.id)));
+      setSelectedHabitIds(new Set());
+    }
+  };
+
+  const handleBulkChangeCategory = (cat: HabitCategory) => {
+    setHabits(habits.map(h => selectedHabitIds.has(h.id) ? { ...h, category: cat } : h));
+    setSelectedHabitIds(new Set());
   };
 
   const getAiAdvice = async () => {
@@ -256,20 +573,26 @@ export default function App() {
             </h1>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <div className="mr-2">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400/15 text-yellow-600 rounded-full font-bold text-xs md:text-sm border border-yellow-400/20 shadow-sm shrink-0">
+                <Trophy size={14} className="fill-yellow-500 text-yellow-600 shrink-0" />
+                <span>{rewards.totalPoints} pts</span>
+              </div>
+            </div>
              {view === 'today' && habitsForToday.length > 0 && (
-               <div className="hidden md:flex items-center gap-4 mr-4">
-                 <div className="text-right">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-900/20 block">Today's Progress</span>
-                    <span className="text-2xl font-serif italic text-brand-900">{dailyCompletionRate}%</span>
+               <div className="flex items-center gap-2 md:gap-4 mr-2 md:mr-4">
+                 <div className="text-right hidden sm:block">
+                    <span className="text-[px] font-black uppercase tracking-widest text-brand-900/20 block">Today</span>
+                    <span className="text-xl md:text-2xl font-serif italic text-brand-900">{dailyCompletionRate}%</span>
                  </div>
-                 <div className="w-12 h-12 rounded-full border-4 border-brand-900/5 flex items-center justify-center relative overflow-hidden">
+                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border-4 border-brand-900/5 flex items-center justify-center relative overflow-hidden">
                     <motion.div 
                       initial={{ height: 0 }}
                       animate={{ height: `${dailyCompletionRate}%` }}
                       className="absolute bottom-0 left-0 right-0 bg-brand-900/10"
                     />
-                    <span className="relative text-[10px] font-bold text-brand-900/40">{dailyCompletionRate}%</span>
+                    <span className="relative text-[8px] md:text-[10px] font-bold text-brand-900/40">{dailyCompletionRate}%</span>
                  </div>
                </div>
              )}
@@ -277,31 +600,31 @@ export default function App() {
               onClick={() => setView('today')}
               title="Today"
               className={cn(
-                "p-3 rounded-full transition-all duration-300",
+                "p-2 md:p-3 rounded-full transition-all duration-300",
                 view === 'today' ? "bg-brand-900 text-brand-100" : "bg-transparent text-brand-900/60 hover:bg-brand-200"
               )}
             >
-              <CalendarIcon size={24} />
+              <CalendarIcon size={20} className="md:w-[24px] md:h-[24px]" />
             </button>
             <button 
               onClick={() => setView('archived')}
               title="Archived"
               className={cn(
-                "p-3 rounded-full transition-all duration-300",
+                "p-2 md:p-3 rounded-full transition-all duration-300",
                 view === 'archived' ? "bg-brand-900 text-brand-100" : "bg-transparent text-brand-900/60 hover:bg-brand-200"
               )}
             >
-              <Archive size={24} />
+              <Archive size={20} className="md:w-[24px] md:h-[24px]" />
             </button>
             <button 
               onClick={() => setView('stats')}
               title="Statistics"
               className={cn(
-                "p-3 rounded-full transition-all duration-300",
+                "p-2 md:p-3 rounded-full transition-all duration-300",
                 view === 'stats' ? "bg-brand-900 text-brand-100" : "bg-transparent text-brand-900/60 hover:bg-brand-200"
               )}
             >
-              <BarChart3 size={24} />
+              <BarChart3 size={20} className="md:w-[24px] md:h-[24px]" />
             </button>
           </div>
         </div>
@@ -390,10 +713,14 @@ export default function App() {
                           habit={habit}
                           completed={!!(completions[todayKey] || {})[habit.id]}
                           streak={calculateStreak(habit.id, completions)}
+                          bestStreak={calculateStreakDetails(habit.id, completions).bestStreak}
                           onToggle={() => handleToggleHabit(habit.id)}
                           onDelete={() => handleDeleteHabit(habit.id)}
                           onEdit={() => { setEditingHabit(habit); setIsModalOpen(true); }}
                           onArchive={() => handleArchiveHabit(habit.id)}
+                          onSelect={() => toggleSelectHabit(habit.id)}
+                          selected={selectedHabitIds.has(habit.id)}
+                          isMultiSelectMode={selectedHabitIds.size > 0}
                         />
                       ))}
                     </div>
@@ -440,6 +767,7 @@ export default function App() {
             aiAdvice={aiAdvice}
             onGetAdvice={getAiAdvice}
             isAiLoading={isAiLoading}
+            rewards={rewards}
           />
         )}
       </main>
@@ -460,6 +788,76 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {selectedHabitIds.size > 0 && (
+          <MultiSelectToolbar 
+            count={selectedHabitIds.size}
+            onClose={() => setSelectedHabitIds(new Set())}
+            onArchive={handleBulkArchive}
+            onDelete={handleBulkDelete}
+            onCategoryChange={handleBulkChangeCategory}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Celebration Modal */}
+      <AnimatePresence>
+        {celebratingMilestone && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-900/60 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              exit={{ scale: 0.9, y: 50 }}
+              className="bg-brand-100 p-8 md:p-12 rounded-[3.5rem] border border-yellow-400/20 shadow-2xl max-w-lg w-full text-center relative overflow-hidden"
+            >
+              {/* Animated ambient light glow */}
+              <motion.div 
+                animate={{ scale: [1, 1.15, 1], rotate: 360 }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 bg-gradient-to-tr from-yellow-400/5 to-transparent rounded-full blur-3xl pointer-events-none"
+              />
+
+              <div className="relative z-10 space-y-6">
+                <div className="w-24 h-24 bg-yellow-400 text-brand-900 rounded-[2rem] flex items-center justify-center mx-auto shadow-lg animate-bounce duration-1000">
+                  <Trophy size={48} className="fill-current" />
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-yellow-600 block font-sans">Milestone Reached!</span>
+                  <h2 className="font-serif text-3xl md:text-4xl text-brand-900 leading-tight">
+                    {celebratingMilestone.badgeName}
+                  </h2>
+                </div>
+
+                <p className="text-sm font-sans text-brand-900/60 italic max-w-sm mx-auto leading-relaxed">
+                  {celebratingMilestone.text}
+                </p>
+
+                <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-yellow-400 text-brand-900 rounded-full font-black text-xs md:text-sm shadow-md">
+                  <Trophy size={14} className="fill-current" />
+                  <span>+{celebratingMilestone.points} Essence PTS</span>
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    onClick={() => setCelebratingMilestone(null)}
+                    className="w-full py-4 bg-brand-900 text-brand-100 rounded-2xl font-bold uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl font-sans"
+                  >
+                    Integrate Essence
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <footer className="mt-24 pt-8 border-t border-brand-900/10 text-center">
         <p className="text-xs text-brand-900/30 uppercase tracking-[0.2em] font-medium">Rfwstudios &copy; {new Date().getFullYear()}</p>
       </footer>
@@ -475,6 +873,10 @@ interface HabitCardProps {
   onDelete: () => void;
   onEdit: () => void;
   onArchive: () => void;
+  onSelect: () => void;
+  selected: boolean;
+  isMultiSelectMode: boolean;
+  bestStreak: number;
   key?: string;
 }
 
@@ -504,23 +906,34 @@ function MilestoneBadge({ streak }: { streak: number }) {
   );
 }
 
-function HabitCard({ habit, completed, streak, onToggle, onDelete, onEdit, onArchive }: HabitCardProps) {
+function HabitCard({ habit, completed, streak, bestStreak, onToggle, onDelete, onEdit, onArchive, onSelect, selected, isMultiSelectMode }: HabitCardProps) {
   const milestone = streak === 7 || streak === 30 || streak === 100;
   const isHighStreak = streak >= 7;
+  const HabitIcon = HABIT_ICONS.find(i => i.name === habit.icon)?.icon || HABIT_ICONS.find(i => i.name === 'Check')?.icon || Circle;
   
   return (
     <motion.div 
       layout
       className={cn(
         "group relative flex items-center justify-between p-6 rounded-3xl transition-all duration-500",
-        completed ? "bg-brand-900 text-brand-100" : "bg-white border border-brand-900/5 shadow-sm hover:shadow-md",
+        selected ? "ring-2 ring-brand-900 border-transparent" : "border-brand-900/5",
+        completed ? "bg-brand-900 text-brand-100" : "bg-white border shadow-sm hover:shadow-md",
         habit.archived && "opacity-60 grayscale-[0.5]"
       )}
     >
       <AnimatePresence>
         {isHighStreak && <MilestoneBadge streak={streak} />}
       </AnimatePresence>
-      <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={onToggle}>
+
+      <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={isMultiSelectMode ? onSelect : onToggle}>
+        {isMultiSelectMode && (
+          <div className={cn(
+            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+            selected ? "bg-brand-900 border-brand-900 text-brand-100" : "bg-white border-brand-900/10"
+          )}>
+            {selected && <Check size={14} />}
+          </div>
+        )}
         <div 
           className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 relative"
           style={{ backgroundColor: completed ? 'rgba(255,255,255,0.1)' : `${habit.color}15` }}
@@ -531,10 +944,10 @@ function HabitCard({ habit, completed, streak, onToggle, onDelete, onEdit, onArc
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 15 }}
             >
-              <CheckCircle2 size={24} className="text-brand-100" />
+              <HabitIcon size={24} className="text-brand-100" />
             </motion.div>
           ) : (
-            <Circle size={24} style={{ color: habit.color }} />
+            <HabitIcon size={24} style={{ color: habit.color }} />
           )}
           {completed && isHighStreak && (
             <motion.div
@@ -546,7 +959,7 @@ function HabitCard({ habit, completed, streak, onToggle, onDelete, onEdit, onArc
           )}
         </div>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <h3 className={cn(
               "font-serif text-xl transition-all",
               completed ? "line-through opacity-60" : "text-brand-900"
@@ -559,10 +972,26 @@ function HabitCard({ habit, completed, streak, onToggle, onDelete, onEdit, onArc
                 completed ? "bg-brand-100/20 text-brand-100 border border-white/20" : "bg-orange-500 text-white shadow-sm"
               )}>
                 <Flame size={10} className="fill-current" />
-                {streak} {streak === 1 ? 'Day' : 'Days'}
+                {streak}
+              </div>
+            )}
+            {bestStreak > streak && (
+              <div className={cn(
+                "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter opacity-40",
+                completed ? "text-brand-100" : "text-brand-900"
+              )}>
+                Best: {bestStreak}
               </div>
             )}
           </div>
+          {habit.goal && (
+            <p className={cn(
+              "text-[10px] font-black uppercase tracking-widest mt-0.5",
+              completed ? "text-brand-100/40" : "text-brand-900/40"
+            )}>
+              Goal: {habit.goal}
+            </p>
+          )}
           {habit.reminderTime && (
             <div className={cn(
               "flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest mt-1",
@@ -589,14 +1018,25 @@ function HabitCard({ habit, completed, streak, onToggle, onDelete, onEdit, onArc
         </div>
       </div>
 
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onSelect(); }}
+          className={cn(
+            "p-2 rounded-xl hover:bg-brand-100/10",
+            completed ? "text-brand-100/40 hover:text-brand-100" : "text-brand-900/40 hover:text-brand-900",
+            selected && "text-brand-900 font-bold bg-brand-200"
+          )}
+          aria-label="Select Intention"
+        >
+          <Check size={18} />
+        </button>
         <button 
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
           className={cn(
             "p-2 rounded-xl hover:bg-brand-100/10",
             completed ? "text-brand-100/40 hover:text-brand-100" : "text-brand-900/20 hover:text-brand-900"
           )}
-          title="Edit"
+          aria-label="Edit Intention"
         >
           <Settings size={18} />
         </button>
@@ -607,7 +1047,7 @@ function HabitCard({ habit, completed, streak, onToggle, onDelete, onEdit, onArc
             completed ? "text-brand-100/40 hover:text-brand-100" : "text-brand-900/20 hover:text-brand-900",
             habit.archived && "text-brand-900 font-bold bg-brand-200"
           )}
-          title={habit.archived ? "Unarchive" : "Archive"}
+          aria-label={habit.archived ? "Unarchive Intention" : "Archive Intention"}
         >
           {habit.archived ? <History size={18} /> : <Archive size={18} />}
         </button>
@@ -617,7 +1057,7 @@ function HabitCard({ habit, completed, streak, onToggle, onDelete, onEdit, onArc
             "p-2 rounded-xl hover:bg-brand-100/10",
             completed ? "text-brand-100/40 hover:text-brand-100" : "text-brand-900/20 hover:text-red-500"
           )}
-          title="Delete"
+          aria-label="Delete Intention"
         >
           <Trash2 size={18} />
         </button>
@@ -690,16 +1130,108 @@ function HistoryCalendar({ completions, habit }: { completions: CompletionRecord
   );
 }
 
-function StatsSection({ stats, habits, completions, aiAdvice, onGetAdvice, isAiLoading }: { 
-  stats: { chartData: any[], totalCompletions: number };
+function MasterCalendar({ completions, habits }: { completions: CompletionRecord, habits: Habit[] }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(monthStart);
+  const startDate = startOfWeek(monthStart);
+  const endDate = endOfWeek(monthEnd);
+  
+  const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
+
+  const prevMonth = () => setCurrentDate(subDays(monthStart, 1));
+  const nextMonth = () => setCurrentDate(subDays(endOfMonth(monthStart), -1));
+
+  const getCompletionsForDay = (dateKey: string) => {
+    const dayRecords = completions[dateKey] || {};
+    return Object.keys(dayRecords).filter(habitId => dayRecords[habitId]).length;
+  };
+
+  return (
+    <div className="bg-white p-8 rounded-[2.5rem] border border-brand-900/5 shadow-sm">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h3 className="font-serif text-2xl italic">Master Calendar</h3>
+          <p className="text-xs text-brand-900/40 uppercase tracking-widest font-bold mt-1">Total Daily Completions</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <h4 className="font-serif text-lg italic text-brand-900/60">
+            {format(currentDate, 'MMMM yyyy')}
+          </h4>
+          <div className="flex gap-1">
+            <button onClick={prevMonth} className="p-2 hover:bg-brand-200 rounded-full transition-colors">
+              <ChevronLeft size={16} />
+            </button>
+            <button onClick={nextMonth} className="p-2 hover:bg-brand-200 rounded-full transition-colors">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-7 gap-3">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          <div key={day} className="text-center text-[10px] font-black text-brand-900/20 uppercase tracking-widest py-2">
+            {day}
+          </div>
+        ))}
+        {calendarDays.map(day => {
+          const dateKey = format(day, 'yyyy-MM-dd');
+          const count = getCompletionsForDay(dateKey);
+          const isCurrentMonth = isSameMonth(day, monthStart);
+          const activeHabits = habits.length || 1;
+          const intensity = Math.min(count / activeHabits, 1);
+
+          return (
+            <div 
+              key={day.toString()}
+              className={cn(
+                "aspect-square rounded-2xl flex flex-col items-center justify-center text-xs font-bold transition-all relative group",
+                !isCurrentMonth ? "opacity-10 pointer-events-none" : "opacity-100",
+                count > 0 ? "text-brand-100" : "bg-brand-200/40 text-brand-900/20"
+              )}
+              style={{ 
+                backgroundColor: count > 0 ? `rgba(26, 26, 26, ${0.1 + intensity * 0.9})` : undefined 
+              }}
+            >
+              {format(day, 'd')}
+              {count > 0 && (
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-brand-900/90 rounded-2xl transition-opacity">
+                  <span className="text-[10px]">{count}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StatsSection({ stats, habits, completions, aiAdvice, onGetAdvice, isAiLoading, rewards }: { 
+  stats: { chartData: any[], totalCompletions: number, consistencyRate: number };
   habits: Habit[];
   completions: CompletionRecord;
   aiAdvice: { advice: string; suggestion: string } | null;
   onGetAdvice: () => void;
   isAiLoading: boolean;
+  rewards: {
+    totalPoints: number;
+    badgeStatus: any[];
+    totalCompletions: number;
+    bestStreak: number;
+  };
 }) {
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(habits[0]?.id || null);
   const selectedHabit = habits.find(h => h.id === selectedHabitId);
+
+  const getBadgeIconComponent = (iconName: string) => {
+    if (iconName === 'Flame') return Flame;
+    if (iconName === 'Trophy') return Trophy;
+    const match = HABIT_ICONS.find(i => i.name === iconName);
+    return match ? match.icon : Trophy;
+  };
 
   return (
     <motion.div 
@@ -708,7 +1240,7 @@ function StatsSection({ stats, habits, completions, aiAdvice, onGetAdvice, isAiL
       className="space-y-12"
     >
       {/* AI Advice Section */}
-      <div className="bg-gradient-to-br from-brand-900 to-[#2a2a2a] p-8 rounded-[2.5rem] text-brand-100 relative overflow-hidden group">
+      <div className="bg-gradient-to-br from-brand-900 to-[#2a2a2a] p-8 rounded-[2.5rem] text-brand-100 relative overflow-hidden group border border-white/5">
         <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
           <Trophy size={160} />
         </div>
@@ -741,6 +1273,7 @@ function StatsSection({ stats, habits, completions, aiAdvice, onGetAdvice, isAiL
           )}
         </div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-8 rounded-3xl border border-brand-900/5 shadow-sm">
           <div className="flex justify-between items-start mb-4">
@@ -759,11 +1292,96 @@ function StatsSection({ stats, habits, completions, aiAdvice, onGetAdvice, isAiL
         <div className="bg-white p-8 rounded-3xl border border-brand-900/5 shadow-sm">
            <div className="flex justify-between items-start mb-4">
             <CalendarIcon className="text-brand-900/40" size={32} />
-            <span className="text-xs uppercase tracking-widest font-bold text-brand-900/20">Consistency Rate</span>
+            <span className="text-xs uppercase tracking-widest font-bold text-brand-900/20">7-Day Consistency</span>
           </div>
           <span className="block font-serif text-5xl font-black text-brand-900">
-            {habits.length > 0 ? Math.round((stats.totalCompletions / (habits.length * 7)) * 100) : 0}%
+            {stats.consistencyRate}%
           </span>
+        </div>
+      </div>
+
+      {/* Achievements Sanctuary */}
+      <div className="bg-white p-8 rounded-[2.5rem] border border-brand-900/5 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h3 className="font-serif text-2xl italic">Achievements Sanctuary</h3>
+            <p className="text-xs text-brand-900/40 uppercase tracking-widest font-bold mt-1">Unlock milestones and earn essence points</p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-yellow-400/15 text-yellow-600 rounded-full font-bold text-sm border border-yellow-400/20 shadow-sm shrink-0">
+            <Trophy size={16} className="fill-yellow-500 text-yellow-600" />
+            <span>{rewards.totalPoints} Essence Points</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {rewards.badgeStatus.map((badge) => {
+            const isUnlocked = badge.isUnlocked;
+            const percentage = Math.round((badge.progress / badge.targetValue) * 100);
+            const BadgeIcon = getBadgeIconComponent(badge.iconName);
+
+            return (
+              <motion.div 
+                key={badge.id}
+                whileHover={{ y: -4 }}
+                className={cn(
+                  "p-6 rounded-[2rem] border transition-all relative overflow-hidden flex flex-col justify-between min-h-[220px]",
+                  isUnlocked 
+                    ? "bg-brand-900 text-brand-100 border-transparent shadow-md" 
+                    : "bg-brand-200/20 border-brand-900/5 text-brand-900/80 shadow-sm"
+                )}
+              >
+                {/* Background light-glow for unlocked badges */}
+                {isUnlocked && (
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 rounded-full blur-3xl -translate-y-5 translate-x-5 pointer-events-none" />
+                )}
+
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center",
+                      isUnlocked ? "bg-yellow-400 text-brand-900 shadow-md animate-pulse" : "bg-brand-200 text-brand-900/30"
+                    )}>
+                      <BadgeIcon size={24} className={isUnlocked ? "fill-current" : ""} />
+                    </div>
+                    <div className={cn(
+                      "text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full",
+                      isUnlocked ? "bg-yellow-400/20 text-yellow-400" : "bg-brand-200 text-brand-900/40"
+                    )}>
+                      +{badge.pointsReward} PTS
+                    </div>
+                  </div>
+
+                  <h4 className="font-serif text-lg leading-snug mb-1 font-semibold">{badge.name}</h4>
+                  <p className={cn(
+                    "text-xs leading-relaxed",
+                    isUnlocked ? "text-brand-100/60" : "text-brand-900/60"
+                  )}>
+                    {badge.description}
+                  </p>
+                </div>
+
+                <div className="mt-6">
+                  <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest mb-1.5">
+                    <span className={isUnlocked ? "text-yellow-400" : "text-brand-900/30"}>
+                      {isUnlocked ? "Unlocked" : "Progress"}
+                    </span>
+                    <span className={isUnlocked ? "text-brand-100/40" : "text-brand-900/35 font-bold"}>
+                      {badge.progress} / {badge.targetValue}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-brand-900/10 rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full rounded-full transition-all duration-1000",
+                        isUnlocked ? "bg-yellow-400" : "bg-brand-900/40"
+                      )}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 
@@ -835,6 +1453,8 @@ function StatsSection({ stats, habits, completions, aiAdvice, onGetAdvice, isAiL
           </div>
         </div>
       </div>
+
+      <MasterCalendar completions={completions} habits={habits} />
     </motion.div>
   );
 }
@@ -855,6 +1475,8 @@ function HabitModal({ habits, habit, categories, colors, collections, onAddColle
     frequency?: number[];
     reminderTime?: string;
     collectionId?: string;
+    goal?: string;
+    icon?: string;
   }) => void;
 }) {
   const [name, setName] = useState(habit?.name || '');
@@ -862,6 +1484,8 @@ function HabitModal({ habits, habit, categories, colors, collections, onAddColle
   const [category, setCategory] = useState<HabitCategory>(habit?.category || 'Health');
   const [color, setColor] = useState(habit?.color || '#ef4444');
   const [customColor, setCustomColor] = useState(habit?.color || '#ef4444');
+  const [goal, setGoal] = useState(habit?.goal || '');
+  const [iconName, setIconName] = useState(habit?.icon || 'Check');
   const [frequency, setFrequency] = useState<number[]>(habit?.frequency || [0, 1, 2, 3, 4, 5, 6]);
   const [reminderTime, setReminderTime] = useState(habit?.reminderTime || '');
   const [collectionId, setCollectionId] = useState(habit?.collectionId || '');
@@ -875,7 +1499,7 @@ function HabitModal({ habits, habit, categories, colors, collections, onAddColle
     );
   };
 
-  const handleHandleAddCollection = () => {
+  const handleAddCollection = () => {
     if (!newCollectionName.trim()) return;
     const color = COLORS[Math.floor(Math.random() * COLORS.length)];
     onAddCollection(newCollectionName.trim(), color);
@@ -912,7 +1536,9 @@ function HabitModal({ habits, habit, categories, colors, collections, onAddColle
       description: description.trim() || undefined,
       frequency: frequency.length === 7 ? undefined : frequency,
       reminderTime: reminderTime || undefined,
-      collectionId: collectionId || undefined
+      collectionId: collectionId || undefined,
+      goal: goal.trim() || undefined,
+      icon: iconName
     });
   };
 
@@ -943,6 +1569,16 @@ function HabitModal({ habits, habit, categories, colors, collections, onAddColle
                   onChange={(e) => setName(e.target.value)}
                   className="w-full bg-white border border-brand-900/10 p-4 rounded-2xl text-lg font-serif focus:outline-none focus:ring-2 focus:ring-brand-900/10"
                   placeholder="e.g. Daily Reflection"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs uppercase tracking-widest font-bold text-brand-900/40 mb-2 block">Daily Goal (Optional)</label>
+                <input 
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  className="w-full bg-white border border-brand-900/10 p-4 rounded-2xl text-sm font-sans focus:outline-none focus:ring-2 focus:ring-brand-900/10"
+                  placeholder="e.g. 8 glasses, 30 minutes"
                 />
               </div>
 
@@ -1029,7 +1665,7 @@ function HabitModal({ habits, habit, categories, colors, collections, onAddColle
                   />
                   <button 
                     type="button"
-                    onClick={handleHandleAddCollection}
+                    onClick={handleAddCollection}
                     className="px-4 py-2 bg-brand-200 rounded-xl text-[10px] font-bold uppercase tracking-widest"
                   >
                     Create
@@ -1038,32 +1674,8 @@ function HabitModal({ habits, habit, categories, colors, collections, onAddColle
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-3">
-                  <label className="text-xs uppercase tracking-widest font-bold text-brand-900/40 block">Essence Color</label>
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="text" 
-                      value={customColor}
-                      onChange={(e) => {
-                        setCustomColor(e.target.value);
-                        if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                          setColor(e.target.value);
-                        }
-                      }}
-                      className="w-20 px-2 py-1 text-[10px] font-mono border border-brand-900/10 rounded uppercase"
-                    />
-                    <input 
-                      type="color" 
-                      value={color}
-                      onChange={(e) => {
-                        setColor(e.target.value);
-                        setCustomColor(e.target.value);
-                      }}
-                      className="w-6 h-6 rounded-lg overflow-hidden border-none"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
+                <label className="text-xs uppercase tracking-widest font-bold text-brand-900/40 mb-3 block">Essence Color</label>
+                <div className="flex flex-wrap gap-2 mb-4">
                   {colors.map((c) => (
                     <button
                       key={c}
@@ -1078,6 +1690,25 @@ function HabitModal({ habits, habit, categories, colors, collections, onAddColle
                       )}
                       style={{ backgroundColor: c }}
                     />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs uppercase tracking-widest font-bold text-brand-900/40 mb-3 block">Icon</label>
+                <div className="flex flex-wrap gap-2">
+                  {HABIT_ICONS.map((item) => (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => setIconName(item.name)}
+                      className={cn(
+                        "p-2 rounded-xl border-2 transition-all",
+                        iconName === item.name ? "border-brand-900 bg-brand-900 text-brand-100" : "border-brand-900/5 bg-white text-brand-900/40"
+                      )}
+                    >
+                      <item.icon size={18} />
+                    </button>
                   ))}
                 </div>
               </div>
