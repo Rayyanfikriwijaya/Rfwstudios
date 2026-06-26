@@ -32,20 +32,22 @@ import {
   Target,
   Smile,
   Check,
-  X
+  X,
+  FolderHeart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
-import { Habit, CompletionRecord, HabitCategory, Collection } from './types';
+import { Habit, CompletionRecord, HabitCategory, Collection, Category } from './types';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import CategoriesManager from './components/CategoriesManager';
 
 // Constants
-const CATEGORIES: { name: HabitCategory; color: string }[] = [
-  { name: 'Health', color: '#ef4444' },
-  { name: 'Productivity', color: '#3b82f6' },
-  { name: 'Personal', color: '#10b981' },
-  { name: 'Finances', color: '#f59e0b' },
-  { name: 'Other', color: '#6366f1' },
+const DEFAULT_CATEGORIES: Category[] = [
+  { id: 'Health', name: 'Health', color: '#ef4444', goalText: 'Maintain physical and mental well-being through daily habits.', targetCompletionsPerMonth: 20 },
+  { id: 'Productivity', name: 'Productivity', color: '#3b82f6', goalText: 'Optimize workflow, study sessions, and mindful focus.', targetCompletionsPerMonth: 15 },
+  { id: 'Personal', name: 'Personal', color: '#10b981', goalText: 'Foster continuous personal growth, reading, and learning.', targetCompletionsPerMonth: 15 },
+  { id: 'Finances', name: 'Finances', color: '#f59e0b', goalText: 'Improve financial security, saving rates, and tracking.', targetCompletionsPerMonth: 8 },
+  { id: 'Other', name: 'Other', color: '#6366f1', goalText: 'Sustain various positive daily habits and routines.', targetCompletionsPerMonth: 5 },
 ];
 
 const COLORS = [
@@ -149,12 +151,14 @@ type SortOption = 'name' | 'category' | 'createdAt' | 'streak';
 
 function MultiSelectToolbar({ 
   count, 
+  categories,
   onClose, 
   onArchive, 
   onDelete, 
   onCategoryChange 
 }: { 
   count: number; 
+  categories: Category[];
   onClose: () => void; 
   onArchive: () => void; 
   onDelete: () => void; 
@@ -195,9 +199,9 @@ function MultiSelectToolbar({
             Move To...
           </button>
           <div className="absolute bottom-full mb-4 left-0 hidden group-hover:block bg-brand-900 border border-white/10 rounded-2xl p-2 min-w-[160px] shadow-2xl">
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
-                key={cat.name}
+                key={cat.id}
                 onClick={() => onCategoryChange(cat.name)}
                 className="w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 rounded-lg transition-colors"
               >
@@ -229,17 +233,37 @@ export default function App() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [view, setView] = useState<'today' | 'stats' | 'archived'>('today');
+  const [view, setView] = useState<'today' | 'stats' | 'archived' | 'categories'>('today');
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const saved = localStorage.getItem('habitly_categories');
+    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+  });
   const [filter, setFilter] = useState<HabitCategory | 'All'>('All');
   const [sortBy, setSortBy] = useState<SortOption>('createdAt');
   const [selectedHabitIds, setSelectedHabitIds] = useState<Set<string>>(new Set());
   const [aiAdvice, setAiAdvice] = useState<{ advice: string; suggestion: string } | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [celebratingMilestone, setCelebratingMilestone] = useState<{ badgeName: string; points: number; text: string } | null>(null);
+  const [triggeredReminders, setTriggeredReminders] = useState<{ [dateKey: string]: { [habitId: string]: boolean } }>(() => {
+    const saved = localStorage.getItem('habitly_triggered_reminders');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [toasts, setToasts] = useState<{ id: string; habitId: string; habitName: string; time: string; color: string }[]>([]);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
+    return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('habitly_triggered_reminders', JSON.stringify(triggeredReminders));
+  }, [triggeredReminders]);
 
   useEffect(() => {
     localStorage.setItem('habitly_habits', JSON.stringify(habits));
   }, [habits]);
+
+  useEffect(() => {
+    localStorage.setItem('habitly_categories', JSON.stringify(categories));
+  }, [categories]);
 
   useEffect(() => {
     localStorage.setItem('habitly_collections', JSON.stringify(collections));
@@ -248,6 +272,75 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('habitly_completions', JSON.stringify(completions));
   }, [completions]);
+
+  useEffect(() => {
+    const checkReminders = () => {
+      const now = new Date();
+      const currentHourMin = format(now, 'HH:mm');
+      const currentDateKey = format(now, 'yyyy-MM-dd');
+      const currentDayOfWeek = now.getDay();
+
+      habits.forEach(habit => {
+        if (habit.archived) return;
+        if (habit.frequency && habit.frequency.length > 0 && !habit.frequency.includes(currentDayOfWeek)) return;
+
+        if (habit.reminderTime === currentHourMin) {
+          const isCompletedToday = completions[currentDateKey]?.[habit.id];
+          const isNotifiedToday = triggeredReminders[currentDateKey]?.[habit.id];
+
+          if (!isCompletedToday && !isNotifiedToday) {
+            // Trigger native browser notification if permitted
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              try {
+                new Notification(`Intention Reminder: ${habit.name}`, {
+                  body: habit.description || `It's time for your daily habit scheduled at ${habit.reminderTime}.`,
+                  icon: '/favicon.ico'
+                });
+              } catch (err) {
+                console.error('Failed to show native browser notification:', err);
+              }
+            }
+
+            // Add custom visual in-app toast notification
+            setToasts(prev => {
+              if (prev.some(t => t.habitId === habit.id)) return prev;
+              return [...prev, {
+                id: `${habit.id}-${Date.now()}`,
+                habitId: habit.id,
+                habitName: habit.name,
+                time: habit.reminderTime || currentHourMin,
+                color: habit.color || '#ef4444'
+              }];
+            });
+
+            // Persist that the reminder has been sent for this date
+            setTriggeredReminders(prev => ({
+              ...prev,
+              [currentDateKey]: {
+                ...(prev[currentDateKey] || {}),
+                [habit.id]: true
+              }
+            }));
+          }
+        }
+      });
+    };
+
+    checkReminders();
+    const interval = setInterval(checkReminders, 15000);
+    return () => clearInterval(interval);
+  }, [habits, completions, triggeredReminders]);
+
+  const requestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const result = await Notification.requestPermission();
+        setNotificationPermission(result);
+      } catch (err) {
+        console.error('Notification permission request error:', err);
+      }
+    }
+  };
 
   const today = startOfToday();
   const todayKey = format(today, 'yyyy-MM-dd');
@@ -626,18 +719,45 @@ export default function App() {
             >
               <BarChart3 size={20} className="md:w-[24px] md:h-[24px]" />
             </button>
+            <button 
+              onClick={() => setView('categories')}
+              title="Categories & Goals"
+              className={cn(
+                "p-2 md:p-3 rounded-full transition-all duration-300",
+                view === 'categories' ? "bg-brand-900 text-brand-100" : "bg-transparent text-brand-900/60 hover:bg-brand-200"
+              )}
+            >
+              <FolderHeart size={20} className="md:w-[24px] md:h-[24px]" />
+            </button>
           </div>
         </div>
       </header>
 
       <main>
-        {view !== 'stats' ? (
+        {view === 'today' || view === 'archived' ? (
           <section className="space-y-8">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-brand-900/10 pb-4">
               <h2 className="text-xl font-serif italic text-brand-900/60">
                 {view === 'archived' ? 'Archived Intentions' : 'Your Daily Intentions'}
               </h2>
               <div className="flex gap-3">
+                {notificationPermission !== 'granted' && (
+                  <button 
+                    onClick={requestNotificationPermission}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium hover:scale-105 transition-all shadow-sm border",
+                      notificationPermission === 'denied' 
+                        ? "bg-red-50 text-red-600 border-red-200" 
+                        : "bg-white text-brand-900/60 border-brand-900/10 hover:text-brand-900"
+                    )}
+                    title={notificationPermission === 'denied' ? "Notification permissions blocked. Custom in-app alerts are active." : "Request desktop notification permission"}
+                  >
+                    <Bell size={18} className={cn(notificationPermission === 'denied' ? "text-red-500 animate-none" : "text-brand-900/40 animate-pulse")} />
+                    <span className="hidden sm:inline">
+                      {notificationPermission === 'denied' ? 'Reminders Blocked' : 'Enable Reminders'}
+                    </span>
+                  </button>
+                )}
                 <select 
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -671,9 +791,9 @@ export default function App() {
               >
                 All
               </button>
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <button
-                  key={cat.name}
+                  key={cat.id}
                   onClick={() => setFilter(cat.name)}
                   className={cn(
                     "px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all shrink-0 flex items-center gap-2",
@@ -759,7 +879,7 @@ export default function App() {
               )}
             </div>
           </section>
-        ) : (
+        ) : view === 'stats' ? (
           <StatsSection 
             stats={stats} 
             habits={habits} 
@@ -768,6 +888,14 @@ export default function App() {
             onGetAdvice={getAiAdvice}
             isAiLoading={isAiLoading}
             rewards={rewards}
+          />
+        ) : (
+          <CategoriesManager 
+            categories={categories}
+            setCategories={setCategories}
+            habits={habits}
+            setHabits={setHabits}
+            completions={completions}
           />
         )}
       </main>
@@ -778,7 +906,7 @@ export default function App() {
           <HabitModal 
             habits={habits}
             habit={editingHabit}
-            categories={CATEGORIES}
+            categories={categories}
             colors={COLORS}
             collections={collections}
             onAddCollection={handleAddCollection}
@@ -792,6 +920,7 @@ export default function App() {
         {selectedHabitIds.size > 0 && (
           <MultiSelectToolbar 
             count={selectedHabitIds.size}
+            categories={categories}
             onClose={() => setSelectedHabitIds(new Set())}
             onArchive={handleBulkArchive}
             onDelete={handleBulkDelete}
@@ -857,6 +986,71 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating In-App Toast Notification Stream */}
+      <div className="fixed top-6 right-6 z-50 flex flex-col gap-4 max-w-sm w-full pointer-events-none">
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 50, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 50, scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="pointer-events-auto w-full bg-brand-900 border border-white/10 text-brand-100 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 backdrop-blur-md relative overflow-hidden"
+            >
+              {/* Pulsing glow underlay matching habit color */}
+              <div 
+                className="absolute inset-0 opacity-[0.08] pointer-events-none rounded-3xl blur-xl"
+                style={{ backgroundColor: toast.color }}
+              />
+
+              <div className="flex gap-4">
+                <div 
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner"
+                  style={{ backgroundColor: `${toast.color}20`, color: toast.color }}
+                >
+                  <Bell size={22} className="animate-bounce" />
+                </div>
+                <div className="flex-1 min-w-0 pr-4">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-brand-100/40 block">Reminder • {toast.time}</span>
+                  <h4 className="font-serif text-lg leading-snug font-semibold mt-0.5 truncate text-brand-100">
+                    {toast.habitName}
+                  </h4>
+                  <p className="text-xs text-brand-100/60 mt-1 line-clamp-2 leading-relaxed">
+                    Take a moment for your intention right now.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                  className="absolute top-4 right-4 text-brand-100/30 hover:text-brand-100 p-1 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => {
+                    handleToggleHabit(toast.habitId);
+                    setToasts(prev => prev.filter(t => t.id !== toast.id));
+                  }}
+                  className="flex-1 py-3 bg-brand-100 text-brand-900 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:scale-[1.02] active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-md"
+                >
+                  <Check size={14} className="stroke-[3]" />
+                  Complete
+                </button>
+                <button
+                  onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                  className="px-4 py-3 bg-white/5 hover:bg-white/10 text-brand-100/80 hover:text-brand-100 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       <footer className="mt-24 pt-8 border-t border-brand-900/10 text-center">
         <p className="text-xs text-brand-900/30 uppercase tracking-[0.2em] font-medium">Rfwstudios &copy; {new Date().getFullYear()}</p>

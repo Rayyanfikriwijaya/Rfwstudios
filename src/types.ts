@@ -1,4 +1,12 @@
-export type HabitCategory = 'Health' | 'Productivity' | 'Personal' | 'Finances' | 'Other';
+export type HabitCategory = string;
+
+export interface Category {
+  id: string;
+  name: string;
+  color: string;
+  goalText: string;
+  targetCompletionsPerMonth: number;
+}
 
 export interface Collection {
   id: string;
